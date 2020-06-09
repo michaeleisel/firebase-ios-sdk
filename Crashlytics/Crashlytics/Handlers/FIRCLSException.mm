@@ -81,9 +81,9 @@ void FIRCLSExceptionInitialize(FIRCLSExceptionReadOnlyContext *roContext,
 void FIRCLSExceptionRecordModel(FIRExceptionModel *exceptionModel) {
   const char *name = [[exceptionModel.name copy] UTF8String];
   const char *reason = [[exceptionModel.reason copy] UTF8String];
+  FIRCLSExceptionType type = exceptionModel.fatal ? FIRCLSExceptionTypeCustomFatal : FIRCLSExceptionTypeCustom;
 
-  FIRCLSExceptionRecord(FIRCLSExceptionTypeCustom, name, reason, [exceptionModel.stackTrace copy],
-                        NO);
+  FIRCLSExceptionRecord(type, name, reason, [exceptionModel.stackTrace copy], NO);
 }
 
 void FIRCLSExceptionRecordNSException(NSException *exception) {
@@ -138,7 +138,8 @@ static void FIRCLSExceptionRecordFrame(FIRCLSFile *file, FIRStackFrame *frame) {
 }
 
 static bool FIRCLSExceptionIsNative(FIRCLSExceptionType type) {
-  return type == FIRCLSExceptionTypeObjectiveC || type == FIRCLSExceptionTypeCpp;
+    return type == FIRCLSExceptionTypeObjectiveC || type == FIRCLSExceptionTypeCpp
+      || type == FIRCLSExceptionTypeCustomFatal;
 }
 
 static const char *FIRCLSExceptionNameForType(FIRCLSExceptionType type) {
@@ -148,6 +149,7 @@ static const char *FIRCLSExceptionNameForType(FIRCLSExceptionType type) {
     case FIRCLSExceptionTypeCpp:
       return "c++";
     case FIRCLSExceptionTypeCustom:
+    case FIRCLSExceptionTypeCustomFatal:
       return "custom";
     default:
       break;
