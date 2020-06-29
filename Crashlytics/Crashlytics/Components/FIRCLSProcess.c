@@ -28,6 +28,23 @@
 
 #define THREAD_NAME_BUFFER_SIZE (64)
 
+// It's possible (though unlikely) that an unrelated crash could occur
+// after this override has been set but before the desired crash can occur.
+// By checking that the expected thread is the one actually crashing, we avoid that
+static thread_t sExpectedActualCrashedThread = 0;
+static thread_t sCrashedThreadOverride = 0;
+
+void FIRCLSSetCrashedThreadOverrides(thread_t expectedActualCrashedThread,
+                                     thread_t overrideCrashedThread) {
+  sExpectedActualCrashedThread = expectedActualCrashedThread;
+  sCrashedThreadOverride = overrideCrashedThread;
+}
+
+// Based on FIRCLSProcessIsCrashedThread
+static bool FIRCLSThreadsEqual(thread_t t1, thread_t t2) {
+  return MACH_PORT_INDEX(t1) == MACH_PORT_INDEX(t2);
+}
+
 #pragma mark Prototypes
 static bool FIRCLSProcessGetThreadName(FIRCLSProcess *process,
                                        thread_t thread,
@@ -449,8 +466,14 @@ static bool FIRCLSProcessRecordThread(FIRCLSProcess *process, thread_t thread, F
   FIRCLSFileWriteArrayEnd(file);
 
   // crashed?
-  if (FIRCLSProcessIsCrashedThread(process, thread)) {
-    FIRCLSFileWriteHashEntryBoolean(file, "crashed", true);
+  if (sCrashedThreadOverride != 0 && FIRCLSProcessIsCrashedThread(process, sExpectedActualCrashedThread)) {
+      if (FIRCLSThreadsEqual(thread, sCrashedThreadOverride)) {
+        FIRCLSFileWriteHashEntryBoolean(file, "crashed", true);
+      }
+  } else {
+      if (FIRCLSProcessIsCrashedThread(process, thread)) {
+        FIRCLSFileWriteHashEntryBoolean(file, "crashed", true);
+      }
   }
 
   if (repeatedPC != 0) {
