@@ -190,7 +190,8 @@ void FIRCLSExceptionRecord(FIRCLSExceptionType type,
                            const char *name,
                            const char *reason,
                            NSArray<FIRStackFrame *> *frames,
-                           BOOL attemptDelivery) {
+                           BOOL attemptDelivery,
+                           BOOL recordThreads) {
   if (!FIRCLSContextIsInitialized()) {
     return;
   }
@@ -212,8 +213,10 @@ void FIRCLSExceptionRecord(FIRCLSExceptionType type,
 
       FIRCLSExceptionWrite(&file, type, name, reason, frames);
 
-      // We only want to do this work if we have the expectation that we'll actually crash
-      FIRCLSHandler(&file, mach_thread_self(), NULL);
+      if (recordThreads) {
+        // We only want to do this work if we have the expectation that we'll actually crash
+        FIRCLSHandler(&file, mach_thread_self(), NULL);
+      }
 
       FIRCLSFileClose(&file);
 
@@ -294,6 +297,14 @@ static void FIRCLSCatchAndRecordActiveException(std::type_info *typeInfo) {
   } catch (...) {
     FIRCLSExceptionRecord(FIRCLSExceptionTypeCpp, FIRCLSExceptionDemangle(name), "", nil, YES);
   }
+}
+
+void FIRCLSExceptionRecord(FIRCLSExceptionType type,
+                           const char *name,
+                           const char *reason,
+                           NSArray<FIRStackFrame *> *frames,
+                           BOOL attemptDelivery) {
+    FIRCLSExceptionRecord(type, name, reason, frames, attemptDelivery, YES);
 }
 
 #pragma mark - Handlers
